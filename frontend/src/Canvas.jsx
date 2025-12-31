@@ -1,7 +1,7 @@
 
 import React, { useRef, useState, useEffect } from 'react'
 
-const Canvas = () => {
+const Canvas = ({socket}) => {
     const canvasRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
     // This runs once when the component mounts
