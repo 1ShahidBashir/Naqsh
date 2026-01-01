@@ -4,6 +4,7 @@ import React, { useRef, useState, useEffect } from 'react'
 const Canvas = ({socket}) => {
     const canvasRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
+    const prevPoint = useRef(null);
     // This runs once when the component mounts
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -13,26 +14,39 @@ const Canvas = ({socket}) => {
     }, [])
 
     const startDrawing = ({ nativeEvent }) => {
-        // 1. Set isDrawing to true
-        // 2. Get the context (ctx) from canvasRef
-        // 3. Start a path (beginPath)
-        // 4. Move to the mouse position (nativeEvent.offsetX, nativeEvent.offsetY)
+        const { offsetX, offsetY } = nativeEvent;
+        
         setIsDrawing(true);
+        // SAVE THE START POINT
+        prevPoint.current = { x: offsetX, y: offsetY };
+
         const ctx = canvasRef.current.getContext('2d');
         ctx.beginPath();
-        ctx.moveTo(nativeEvent.offsetX, nativeEvent.offsetY);
+        ctx.moveTo(offsetX, offsetY);
+        ctx.strokeStyle = color; // Make sure color is set here!
     }
 
     const draw = ({ nativeEvent }) => {
-        // 1. Check if we are NOT drawing. If so, return.
-        // 2. Get context
-        // 3. Draw line to new mouse position (lineTo)
-        // 4. Make the line visible (stroke)
-        if(!isDrawing)return;
-        const ctx= canvasRef.current.getContext('2d');
-        ctx.lineTo(nativeEvent.offsetX, nativeEvent.offsetY);
-        ctx.strokeStyle= color;
-        ctx.stroke();
+        if (!isDrawing) return;
+
+        const { offsetX, offsetY } = nativeEvent;
+        const currentPoint = { x: offsetX, y: offsetY };
+        const ctx = canvasRef.current.getContext('2d');
+
+        // 1. Draw Locally using our new helper
+        drawLine({ prevPoint: prevPoint.current, currentPoint, ctx, color });
+
+        // 2. Send to Server
+        if (socket) {
+            socket.emit("draw-line", {
+                prevPoint: prevPoint.current,
+                currentPoint,
+                color
+            });
+        }
+
+        // 3. Update previous point
+        prevPoint.current = currentPoint;
     }
 
     const stopDrawing = () => {
@@ -44,6 +58,36 @@ const Canvas = ({socket}) => {
         setIsDrawing(false);
     }
 
+    const drawLine = ({ prevPoint, currentPoint, ctx, color }) => {
+        const { x: currX, y: currY } = currentPoint;
+        const { x: prevX, y: prevY } = prevPoint;
+        
+        // 1. Set the color
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2; // Optional: set a standard width
+        ctx.lineCap = 'round'; // Makes lines look smoother
+
+        // 2. Draw the path
+        ctx.beginPath();
+        ctx.moveTo(prevX, prevY);
+        ctx.lineTo(currX, currY);
+        ctx.stroke();
+    }
+
+    useEffect(() => {
+        if (!socket) return;
+
+        // Listen for the event from the server
+        socket.on("draw-line", ({ prevPoint, currentPoint, color }) => {
+            const ctx = canvasRef.current.getContext('2d');
+            // Call the same helper function!
+            drawLine({ prevPoint, currentPoint, ctx, color });
+        });
+
+        // Cleanup: remove the listener if component unmounts
+        return () => socket.off("draw-line");
+    }, [socket]); // Re-run if socket changes
+    
     const [color, setColor]= useState("black");
     return (
         <>

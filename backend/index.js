@@ -13,10 +13,19 @@ const io= new Server(server, {
         methods: ["GET", "POST"]
     }
 });
-io.on('connection', (socket)=>{
-    console.log("user connected: ", socket.id);
-    socket.on('disconnect', ()=>{
-        console.log('user disconnected: ', socket.id);
+
+io.on('connection', (socket) => {
+    console.log("User Connected:", socket.id);
+
+    // NEW CODE HERE
+    // Listen for "draw-line" events from the client
+    socket.on("draw-line", ({ prevPoint, currentPoint, color }) => {
+        // "broadcast" sends it to everyone EXCEPT the sender
+        socket.broadcast.emit("draw-line", { prevPoint, currentPoint, color });
+    });
+
+    socket.on('disconnect', () => {
+        console.log('User Disconnected:', socket.id);
     });
 });
 
