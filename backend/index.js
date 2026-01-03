@@ -9,18 +9,26 @@ const server= http.createServer(app);
 
 const io= new Server(server, {
     cors: {
-        origin: ["http://localhost:5173","http://192.168.0.196:5173"],
+        origin: "http://localhost:5173",
         methods: ["GET", "POST"]
     }
 });
 
+// 1. Create storage outside the connection block
+let drawHistory = [];
+
 io.on('connection', (socket) => {
     console.log("User Connected:", socket.id);
 
-    // NEW CODE HERE
-    // Listen for "draw-line" events from the client
+    // 2. IMMEDIATE ACTION: Send existing history to the NEW user only
+    // We use socket.emit (unicast), NOT io.emit (broadcast)
+    socket.emit('get-canvas-state', drawHistory);
+
     socket.on("draw-line", ({ prevPoint, currentPoint, color }) => {
-        // "broadcast" sends it to everyone EXCEPT the sender
+        // 3. Add to history
+        drawHistory.push({ prevPoint, currentPoint, color });
+
+        // 4. Send to everyone else
         socket.broadcast.emit("draw-line", { prevPoint, currentPoint, color });
     });
 

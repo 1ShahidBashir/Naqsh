@@ -4,8 +4,8 @@ import { io } from "socket.io-client";
 
 // 1. Connect outside the component
 // We point to our server's URL
-const socket = io("http://192.168.0.196:3001");
 
+const socket = io("http://localhost:3001");
 const App = () => {
 
   useEffect(() => {

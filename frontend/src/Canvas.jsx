@@ -84,8 +84,20 @@ const Canvas = ({socket}) => {
             drawLine({ prevPoint, currentPoint, ctx, color });
         });
 
+        //listener for history replay
+        socket.on('get-canvas-state', (state)=>{
+            console.log("state received replaying");
+            const ctx= canvasRef.current.getContext('2d');
+            state.forEach(line => {
+                drawLine({...line,ctx});
+            });
+        });
+
         // Cleanup: remove the listener if component unmounts
-        return () => socket.off("draw-line");
+        return () => {
+            socket.off("draw-line");
+            socket.off("get-canvas-state"); // Cleanup
+        };
     }, [socket]); // Re-run if socket changes
     
     const [color, setColor]= useState("black");
