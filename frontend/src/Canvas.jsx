@@ -15,24 +15,39 @@ const Canvas = ({socket}) => {
         canvas.height = window.innerHeight;
     }, [])
 
-    const startDrawing = ({ nativeEvent }) => {
-        const { offsetX, offsetY } = nativeEvent;
+    // depr: i used
+    // const startDrawing = ({ nativeEvent }) => {
+    //     const { offsetX, offsetY } = nativeEvent;
         
-        setIsDrawing(true);
-        // SAVE THE START POINT
-        prevPoint.current = { x: offsetX, y: offsetY };
+    //     setIsDrawing(true);
+    //     // SAVE THE START POINT
+    //     prevPoint.current = { x: offsetX, y: offsetY };
 
+    //     const ctx = canvasRef.current.getContext('2d');
+    //     ctx.beginPath();
+    //     ctx.moveTo(offsetX, offsetY);
+    //     ctx.strokeStyle = color; // Make sure color is set here!
+    // }
+
+    const startDrawing = ({ nativeEvent }) => {
+        // 1. Use  helper!
+        const point = computePointInCanvas(nativeEvent);
         const ctx = canvasRef.current.getContext('2d');
-        ctx.beginPath();
-        ctx.moveTo(offsetX, offsetY);
-        ctx.strokeStyle = color; // Make sure color is set here!
+
+        setIsDrawing(true);
+        
+        // 2. Save NORMALIZED data (0.5), not pixels (500)
+        prevPoint.current = point;
     }
 
     const draw = ({ nativeEvent }) => {
         if (!isDrawing) return;
 
-        const { offsetX, offsetY } = nativeEvent;
-        const currentPoint = { x: offsetX, y: offsetY };
+        //---------- depr i used it earlier to get currentpoint with fixed pixels and not viewport wise
+        // const { offsetX, offsetY } = nativeEvent;
+        // const currentPoint = { x: offsetX, y: offsetY };
+
+        const currentPoint = computePointInCanvas(nativeEvent);
         const ctx = canvasRef.current.getContext('2d');
 
         // 1. Draw Locally using our new helper
@@ -66,20 +81,55 @@ const Canvas = ({socket}) => {
         setIsDrawing(false);
     }
 
-    const drawLine = ({ prevPoint, currentPoint, ctx, color }) => {
-        const { x: currX, y: currY } = currentPoint;
-        const { x: prevX, y: prevY } = prevPoint;
+    // Helper to normalize
+    const computePointInCanvas = (e) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return null;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
         
-        // 1. Set the color
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2; // Optional: set a standard width
-        ctx.lineCap = 'round'; // Makes lines look smoother
-        ctx.lineJoin= 'round';
+        // RETURN NORMALIZED (0-1)
+        return { 
+            x: x / canvas.width, 
+            y: y / canvas.height 
+        }
+    }
 
-        // 2. Draw the path
+    // ---------------------  depr used fixed pixels to draw
+    // const drawLine = ({ prevPoint, currentPoint, ctx, color }) => {
+    //     const { x: currX, y: currY } = currentPoint;
+    //     const { x: prevX, y: prevY } = prevPoint;
+        
+    //     // 1. Set the color
+    //     ctx.strokeStyle = color;
+    //     ctx.lineWidth = 2; // Optional: set a standard width
+    //     ctx.lineCap = 'round'; // Makes lines look smoother
+    //     ctx.lineJoin= 'round';
+
+    //     // 2. Draw the path
+    //     ctx.beginPath();
+    //     ctx.moveTo(prevX, prevY);
+    //     ctx.lineTo(currX, currY);
+    //     ctx.stroke();
+    // }
+
+    const drawLine = ({ prevPoint, currentPoint, ctx, color }) => {
+        // Read current canvas size
+        const { width, height } = ctx.canvas;
+
+        const startX = prevPoint.x * width;
+        const startY = prevPoint.y * height;
+        const endX = currentPoint.x * width;
+        const endY = currentPoint.y * height;
+
         ctx.beginPath();
-        ctx.moveTo(prevX, prevY);
-        ctx.lineTo(currX, currY);
+        ctx.lineCap = 'round';
+        ctx.lineJoin= 'round';
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = color;
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
         ctx.stroke();
     }
 
