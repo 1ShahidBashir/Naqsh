@@ -82,6 +82,24 @@ const Canvas = ({socket}) => {
         }
     }
     //---------------------------------------
+
+
+    //Canvas Resize on Window Resize
+    useEffect(()=>{
+        const handleResize= ()=>{
+            const canvas= canvasRef.current;
+            const ctx= canvas.getContext('2d');
+            const imageData= ctx.getImageData(0,0,canvas.width, canvas.height);
+            canvas.width= window.innerWidth;
+            canvas.height= window.innerHeight;
+            ctx.putImageData(imageData, 0, 0);
+        }
+        window.addEventListener('resize', handleResize);
+        return()=>{
+            window.removeEventListener('resize', handleResize);
+        }
+    },[]);
+
     useEffect(() => {
         if (!socket) return;
 
