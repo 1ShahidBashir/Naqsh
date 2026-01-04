@@ -5,6 +5,8 @@ const Canvas = ({socket}) => {
     const canvasRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const prevPoint = useRef(null);
+
+    const historyRef = useRef([]);//for window resizing arch
     // This runs once when the component mounts
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -35,6 +37,12 @@ const Canvas = ({socket}) => {
 
         // 1. Draw Locally using our new helper
         drawLine({ prevPoint: prevPoint.current, currentPoint, ctx, color });
+
+        historyRef.current.push({ 
+            prevPoint: prevPoint.current, 
+            currentPoint, 
+            color 
+        });
 
         // 2. Send to Server
         if (socket) {
@@ -89,10 +97,18 @@ const Canvas = ({socket}) => {
         const handleResize= ()=>{
             const canvas= canvasRef.current;
             const ctx= canvas.getContext('2d');
-            const imageData= ctx.getImageData(0,0,canvas.width, canvas.height);
+
+            // const imageData= ctx.getImageData(0,0,canvas.width, canvas.height); //depr: used to crop images
             canvas.width= window.innerWidth;
             canvas.height= window.innerHeight;
-            ctx.putImageData(imageData, 0, 0);
+
+            // ctx.putImageData(imageData, 0, 0); //depr: just like above
+
+            //instead of imageData we use history to store strokes
+            historyRef.current.forEach(line => {
+                drawLine({ ...line, ctx });
+            });
+
         }
         window.addEventListener('resize', handleResize);
         return()=>{
@@ -108,6 +124,7 @@ const Canvas = ({socket}) => {
             const ctx = canvasRef.current.getContext('2d');
             // Call the same helper function!
             drawLine({ prevPoint, currentPoint, ctx, color });
+            historyRef.current.push({ prevPoint, currentPoint, color });
         });
 
         //listener for history replay
@@ -117,6 +134,7 @@ const Canvas = ({socket}) => {
             state.forEach(line => {
                 drawLine({...line,ctx});
             });
+            historyRef.current = state;
         });
         
         //------------------------------------------
@@ -125,6 +143,7 @@ const Canvas = ({socket}) => {
             const canvas= canvasRef.current;
             const ctx= canvas.getContext('2d');
             ctx.clearRect(0,0,canvas.width, canvas.height);
+            historyRef.current = [];
         });
         //-------------------------------------------
 
