@@ -32,6 +32,13 @@ io.on('connection', (socket) => {
         socket.broadcast.emit("draw-line", { prevPoint, currentPoint, color });
     });
 
+    //-------------------------------------------------
+    socket.on('clear-screen',()=>{
+        drawHistory= [];
+        io.emit('clear-screen');
+    });
+    //-------------------------------------------------
+
     socket.on('disconnect', () => {
         console.log('User Disconnected:', socket.id);
     });

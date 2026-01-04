@@ -66,6 +66,7 @@ const Canvas = ({socket}) => {
         ctx.strokeStyle = color;
         ctx.lineWidth = 2; // Optional: set a standard width
         ctx.lineCap = 'round'; // Makes lines look smoother
+        ctx.lineJoin= 'round';
 
         // 2. Draw the path
         ctx.beginPath();
@@ -74,6 +75,13 @@ const Canvas = ({socket}) => {
         ctx.stroke();
     }
 
+    //---------------------------------------
+    const clearScreen=()=>{
+        if(socket){
+            socket.emit('clear-screen');
+        }
+    }
+    //---------------------------------------
     useEffect(() => {
         if (!socket) return;
 
@@ -92,11 +100,21 @@ const Canvas = ({socket}) => {
                 drawLine({...line,ctx});
             });
         });
+        
+        //------------------------------------------
+        //clear screen
+        socket.on('clear-screen',()=>{
+            const canvas= canvasRef.current;
+            const ctx= canvas.getContext('2d');
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+        });
+        //-------------------------------------------
 
         // Cleanup: remove the listener if component unmounts
         return () => {
             socket.off("draw-line");
             socket.off("get-canvas-state"); // Cleanup
+            socket.off('clear-screen');
         };
     }, [socket]); // Re-run if socket changes
     
@@ -104,6 +122,7 @@ const Canvas = ({socket}) => {
     return (
         <>
             <input type="color" onChange={(e)=>setColor(e.target.value)}/>
+            <button onClick={clearScreen}>Clear</button>
             <canvas
                 ref={canvasRef}
                 onMouseDown={startDrawing}
