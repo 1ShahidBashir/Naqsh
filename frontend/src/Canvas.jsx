@@ -32,7 +32,6 @@ const Canvas = ({socket}) => {
     const startDrawing = ({ nativeEvent }) => {
         // 1. Use  helper!
         const point = computePointInCanvas(nativeEvent);
-        const ctx = canvasRef.current.getContext('2d');
 
         setIsDrawing(true);
         
