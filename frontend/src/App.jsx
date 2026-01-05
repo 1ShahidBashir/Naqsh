@@ -1,23 +1,49 @@
 import React, { useEffect } from 'react'
 import Canvas from './Canvas'
 import { io } from "socket.io-client";
+import {BrowserRouter, Routes, Route, useNavigate, useParams} from "react-router-dom";
+import {v4 as uuidv4} from "uuid";
 
-// 1. Connect outside the component
-// We point to our server's URL
 
 const socket = io("http://localhost:3001");
+
+const Home= ()=>{
+  const navigate= useNavigate();
+  const createRoom= ()=>{
+    const roomId= uuidv4();
+    navigate(`/room/${roomId}`);
+  }
+  return(
+    <>
+      <button onClick={createRoom}>Create Room</button>
+    </>
+  )
+}
+
+
+const CanvasPage= ()=>{
+  const {roomId}= useParams();
+  return(
+    <Canvas roomId={roomId} socket={socket}/>
+  )
+}
+
 const App = () => {
 
+  //Test the connection on mount
   useEffect(() => {
-    // 2. Test the connection on mount
     socket.on("connect", () => {
         console.log("Connected to server with ID:", socket.id);
     });
   }, []);
 
   return (
-    // Pass the socket down to Canvas so it can use it
-    <Canvas socket={socket} />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home/>}/>
+        <Route path="/room/:roomId" element={<CanvasPage/>}/>
+      </Routes>
+    </BrowserRouter>
   )
 }
 

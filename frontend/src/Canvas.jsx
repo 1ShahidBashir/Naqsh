@@ -1,12 +1,19 @@
 
 import React, { useRef, useState, useEffect } from 'react'
 
-const Canvas = ({socket}) => {
+const Canvas = ({socket, roomId}) => {
     const canvasRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const prevPoint = useRef(null);
-
     const historyRef = useRef([]);//for window resizing arch
+
+    useEffect(()=>{
+        if(socket && roomId){
+            //join the room
+            socket.emit("join-room", roomId);
+        }
+    }, [socket, roomId]);
+
     // This runs once when the component mounts
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -63,7 +70,8 @@ const Canvas = ({socket}) => {
             socket.emit("draw-line", {
                 prevPoint: prevPoint.current,
                 currentPoint,
-                color
+                color,
+                roomId
             });
         }
 
@@ -134,8 +142,12 @@ const Canvas = ({socket}) => {
 
     //---------------------------------------
     const clearScreen=()=>{
+        const canvas= canvasRef.current;
+        const ctx= canvas.getContext('2d');
+        ctx.clearRect(0,0, canvas.width, canvas.height);
+        historyRef.current=[];
         if(socket){
-            socket.emit('clear-screen');
+            socket.emit('clear-screen', roomId);
         }
     }
     //---------------------------------------

@@ -9,34 +9,66 @@ const server= http.createServer(app);
 
 const io= new Server(server, {
     cors: {
-        origin: "http://localhost:5173",
+        origin: "*",
         methods: ["GET", "POST"]
     }
 });
 
-// 1. Create storage outside the connection block
-let drawHistory = [];
+//Depr: Create storage outside the connection block
+// let drawHistory = [];
+
+//use map room to history
+const roomState= new Map();
 
 io.on('connection', (socket) => {
     console.log("User Connected:", socket.id);
+    
+    socket.on('join-room', (roomId)=>{
+        socket.join(roomId); //Socket.io built-in room management
 
-    // 2. IMMEDIATE ACTION: Send existing history to the NEW user only
+        //doesn't exist in map, create it
+        if(!roomState.has(roomId)){
+            roomState.set(roomId, []);
+        }
+
+        //sending user's room's history
+        const history= roomState.get(roomId);
+        socket.emit('get-canvas-state', history); //stays same as old
+    });
+    
+    // DEPR: IMMEDIATE ACTION: Send existing history to the NEW user only
     // We use socket.emit (unicast), NOT io.emit (broadcast)
-    socket.emit('get-canvas-state', drawHistory);
+    // socket.emit('get-canvas-state', drawHistory);
 
-    socket.on("draw-line", ({ prevPoint, currentPoint, color }) => {
-        // 3. Add to history
-        drawHistory.push({ prevPoint, currentPoint, color });
+    socket.on("draw-line", ({ prevPoint, currentPoint, color, roomId }) => {
+        // depr: Add to history
+        //drawHistory.push({ prevPoint, currentPoint, color });
+        if(roomState.has(roomId)){
+            roomState.get(roomId).push({prevPoint, currentPoint, color});
+        }
 
-        // 4. Send to everyone else
-        socket.broadcast.emit("draw-line", { prevPoint, currentPoint, color });
+        // depr: Send to everyone else
+        // socket.broadcast.emit("draw-line", { prevPoint, currentPoint, color });
+        socket.to(roomId).emit('draw-line',{prevPoint, currentPoint, color}); //.to sends to particular place/user in this case room
+
     });
 
     //-------------------------------------------------
-    socket.on('clear-screen',()=>{
-        drawHistory= [];
-        io.emit('clear-screen');
+    // depr
+    // socket.on('clear-screen',()=>{
+    //     drawHistory= [];
+    //     io.emit('clear-screen');
+    // });
+
+    socket.on('clear-screen', (roomId)=>{
+        if(roomState.has(roomId)){
+            roomState.set(roomId, []);
+        }
+
+        //broadcast
+        socket.to(roomId).emit('clear-screen');
     });
+
     //-------------------------------------------------
 
     socket.on('disconnect', () => {
