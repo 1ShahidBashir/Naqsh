@@ -6,6 +6,7 @@ const Canvas = ({socket, roomId}) => {
     const [isDrawing, setIsDrawing] = useState(false);
     const prevPoint = useRef(null);
     const historyRef = useRef([]);//for window resizing arch
+    const [isNeon, setIsNeon]= useState(false);
 
     useEffect(()=>{
         if(socket && roomId){
@@ -57,12 +58,13 @@ const Canvas = ({socket, roomId}) => {
         const ctx = canvasRef.current.getContext('2d');
 
         // 1. Draw Locally using our new helper
-        drawLine({ prevPoint: prevPoint.current, currentPoint, ctx, color });
+        drawLine({ prevPoint: prevPoint.current, currentPoint, ctx, color, isNeon });
 
         historyRef.current.push({ 
             prevPoint: prevPoint.current, 
             currentPoint, 
-            color 
+            color ,
+            isNeon
         });
 
         // 2. Send to Server
@@ -71,7 +73,8 @@ const Canvas = ({socket, roomId}) => {
                 prevPoint: prevPoint.current,
                 currentPoint,
                 color,
-                roomId
+                roomId,
+                isNeon
             });
         }
 
@@ -121,7 +124,7 @@ const Canvas = ({socket, roomId}) => {
     //     ctx.stroke();
     // }
 
-    const drawLine = ({ prevPoint, currentPoint, ctx, color }) => {
+    const drawLine = ({ prevPoint, currentPoint, ctx, color, isNeon}) => {
         // Read current canvas size
         const { width, height } = ctx.canvas;
 
@@ -133,7 +136,17 @@ const Canvas = ({socket, roomId}) => {
         ctx.beginPath();
         ctx.lineCap = 'round';
         ctx.lineJoin= 'round';
-        ctx.lineWidth = 2;
+
+        if(isNeon){
+            //create a blur with same color and increase line width : all -> neon effect
+            ctx.shadowBlur= 10;
+            ctx.shadowColor= color;
+            ctx.lineWidth= 5;
+        }
+        else{
+            ctx.shadowBlur= 0;
+            ctx.lineWidth= 2;
+        }
         ctx.strokeStyle = color;
         ctx.moveTo(startX, startY);
         ctx.lineTo(endX, endY);
@@ -181,11 +194,11 @@ const Canvas = ({socket, roomId}) => {
         if (!socket) return;
 
         // Listen for the event from the server
-        socket.on("draw-line", ({ prevPoint, currentPoint, color }) => {
+        socket.on("draw-line", ({ prevPoint, currentPoint, color , isNeon}) => {
             const ctx = canvasRef.current.getContext('2d');
             // Call the same helper function!
-            drawLine({ prevPoint, currentPoint, ctx, color });
-            historyRef.current.push({ prevPoint, currentPoint, color });
+            drawLine({ prevPoint, currentPoint, ctx, color , isNeon});
+            historyRef.current.push({ prevPoint, currentPoint, color , isNeon});
         });
 
         //listener for history replay
@@ -221,6 +234,12 @@ const Canvas = ({socket, roomId}) => {
         <>
             <input type="color" onChange={(e)=>setColor(e.target.value)}/>
             <button onClick={clearScreen}>Clear</button>
+            <button 
+                onClick={() => setIsNeon(!isNeon)} 
+                style={{ background: isNeon ? 'orange' : 'gray' }}
+            >
+                {isNeon ? 'Neon Mode ON' : 'Neon Mode OFF'}
+            </button>
             <canvas
                 ref={canvasRef}
                 onMouseDown={startDrawing}

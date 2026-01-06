@@ -40,16 +40,16 @@ io.on('connection', (socket) => {
     // We use socket.emit (unicast), NOT io.emit (broadcast)
     // socket.emit('get-canvas-state', drawHistory);
 
-    socket.on("draw-line", ({ prevPoint, currentPoint, color, roomId }) => {
+    socket.on("draw-line", ({ prevPoint, currentPoint, color, roomId, isNeon }) => {
         // depr: Add to history
         //drawHistory.push({ prevPoint, currentPoint, color });
         if(roomState.has(roomId)){
-            roomState.get(roomId).push({prevPoint, currentPoint, color});
+            roomState.get(roomId).push({prevPoint, currentPoint, color, isNeon});
         }
 
         // depr: Send to everyone else
         // socket.broadcast.emit("draw-line", { prevPoint, currentPoint, color });
-        socket.to(roomId).emit('draw-line',{prevPoint, currentPoint, color}); //.to sends to particular place/user in this case room
+        socket.to(roomId).emit('draw-line',{prevPoint, currentPoint, color, isNeon}); //.to sends to particular place/user in this case room
 
     });
 
