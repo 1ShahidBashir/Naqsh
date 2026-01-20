@@ -2,6 +2,7 @@ import express from 'express';
 import http, { METHODS } from 'http';
 import cors from 'cors';
 import {Server} from "socket.io";
+import 'dotenv/config';
 
 const app = express();
 
@@ -9,7 +10,7 @@ const server= http.createServer(app);
 
 const io= new Server(server, {
     cors: {
-        origin: "*",
+        origin: process.env.CLIENT || "*",
         methods: ["GET", "POST"]
     }
 });
@@ -76,4 +77,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(3001, ()=> console.log("server listening on port 3001"));
+server.listen(process.env.PORT, ()=> console.log("server listening"));

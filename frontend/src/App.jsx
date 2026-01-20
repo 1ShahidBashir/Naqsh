@@ -5,7 +5,8 @@ import {BrowserRouter, Routes, Route, useNavigate, useParams} from "react-router
 import {v4 as uuidv4} from "uuid";
 
 
-const socket = io("http://localhost:3001");
+const SERVER_URL = import.meta.env.SERVER || "http://localhost:3001";
+const socket = io(SERVER_URL);
 
 const Home= ()=>{
   const navigate= useNavigate();
