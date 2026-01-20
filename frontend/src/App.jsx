@@ -6,7 +6,7 @@ import {v4 as uuidv4} from "uuid";
 
 
 const SERVER_URL = import.meta.env.SERVER || "http://localhost:3001";
-const socket = io(SERVER_URL);
+const socket = io(SERVER);
 
 const Home= ()=>{
   const navigate= useNavigate();
