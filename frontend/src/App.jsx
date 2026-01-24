@@ -3,7 +3,7 @@ import Canvas from './Canvas'
 import { io } from "socket.io-client";
 import {BrowserRouter, Routes, Route, useNavigate, useParams} from "react-router-dom";
 import {v4 as uuidv4} from "uuid";
-
+import './App.css';
 
 const SERVER_URL = import.meta.env.VITE_SERVER || "http://localhost:3001";
 const socket = io(SERVER_URL); //fix

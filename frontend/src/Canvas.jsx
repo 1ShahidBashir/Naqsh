@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react'
 
 const Canvas = ({socket, roomId}) => {
@@ -96,8 +95,14 @@ const Canvas = ({socket, roomId}) => {
         const canvas = canvasRef.current;
         if (!canvas) return null;
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+
+        //setting coordinates depending on touch or mouse event
+        //-->check if touch event? take x from touch: take x from mouse -- similarly for y
+        const clientX= e.touches? e.touches[0].clientX: e.clientX;
+        const clientY= e.touches? e.touches[0].clientY: e.clientY;
+        
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
         
         // RETURN NORMALIZED (0-1)
         return { 
@@ -245,6 +250,10 @@ const Canvas = ({socket, roomId}) => {
                 onMouseDown={startDrawing}
                 onMouseMove={draw}
                 onMouseUp={stopDrawing}
+                //same for touchScreen
+                onTouchStart={startDrawing}
+                onTouchMove={draw}
+                onTouchEnd={stopDrawing}
                 // This ensures the cursor looks like a crosshair
                 style={{ cursor: 'crosshair', display: 'block' }} 
             />
