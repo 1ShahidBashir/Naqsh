@@ -156,7 +156,7 @@ const Canvas = ({socket, roomId}) => {
         }
         else if(tool=='eraser'){
             ctx.shadowBlur= 0;
-            ctx.lineWidth= 8;
+            ctx.lineWidth= 15;
             ctx.strokeStyle= '#ffffff'
         }
         ctx.moveTo(startX, startY);
