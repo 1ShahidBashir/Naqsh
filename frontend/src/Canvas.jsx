@@ -5,7 +5,8 @@ const Canvas = ({socket, roomId}) => {
     const [isDrawing, setIsDrawing] = useState(false);
     const prevPoint = useRef(null);
     const historyRef = useRef([]);//for window resizing arch
-    const [isNeon, setIsNeon]= useState(false);
+    // const [isNeon, setIsNeon]= useState(false);
+    const [tool, setTool]= useState('pencil');
 
     useEffect(()=>{
         if(socket && roomId){
@@ -57,13 +58,13 @@ const Canvas = ({socket, roomId}) => {
         const ctx = canvasRef.current.getContext('2d');
 
         // 1. Draw Locally using our new helper
-        drawLine({ prevPoint: prevPoint.current, currentPoint, ctx, color, isNeon });
+        drawLine({ prevPoint: prevPoint.current, currentPoint, ctx, color, tool });
 
         historyRef.current.push({ 
             prevPoint: prevPoint.current, 
             currentPoint, 
             color ,
-            isNeon
+            tool
         });
 
         // 2. Send to Server
@@ -73,7 +74,7 @@ const Canvas = ({socket, roomId}) => {
                 currentPoint,
                 color,
                 roomId,
-                isNeon
+                tool
             });
         }
 
@@ -129,7 +130,7 @@ const Canvas = ({socket, roomId}) => {
     //     ctx.stroke();
     // }
 
-    const drawLine = ({ prevPoint, currentPoint, ctx, color, isNeon}) => {
+    const drawLine = ({ prevPoint, currentPoint, ctx, color, tool}) => {
         // Read current canvas size
         const { width, height } = ctx.canvas;
 
@@ -141,18 +142,23 @@ const Canvas = ({socket, roomId}) => {
         ctx.beginPath();
         ctx.lineCap = 'round';
         ctx.lineJoin= 'round';
+        ctx.strokeStyle = color;
 
-        if(isNeon){
+        if(tool==='neon'){
             //create a blur with same color and increase line width : all -> neon effect
             ctx.shadowBlur= 10;
             ctx.shadowColor= color;
             ctx.lineWidth= 5;
         }
-        else{
+        else if(tool=='pencil'){
             ctx.shadowBlur= 0;
             ctx.lineWidth= 2;
         }
-        ctx.strokeStyle = color;
+        else if(tool=='eraser'){
+            ctx.shadowBlur= 0;
+            ctx.lineWidth= 8;
+            ctx.strokeStyle= '#ffffff'
+        }
         ctx.moveTo(startX, startY);
         ctx.lineTo(endX, endY);
         ctx.stroke();
@@ -199,11 +205,11 @@ const Canvas = ({socket, roomId}) => {
         if (!socket) return;
 
         // Listen for the event from the server
-        socket.on("draw-line", ({ prevPoint, currentPoint, color , isNeon}) => {
+        socket.on("draw-line", ({ prevPoint, currentPoint, color , tool}) => {
             const ctx = canvasRef.current.getContext('2d');
             // Call the same helper function!
-            drawLine({ prevPoint, currentPoint, ctx, color , isNeon});
-            historyRef.current.push({ prevPoint, currentPoint, color , isNeon});
+            drawLine({ prevPoint, currentPoint, ctx, color , tool});
+            historyRef.current.push({ prevPoint, currentPoint, color , tool});
         });
 
         //listener for history replay
@@ -239,12 +245,32 @@ const Canvas = ({socket, roomId}) => {
         <>
             <input type="color" onChange={(e)=>setColor(e.target.value)}/>
             <button onClick={clearScreen}>Clear</button>
+
+            {/*tools*/}
             <button 
-                onClick={() => setIsNeon(!isNeon)} 
-                style={{ background: isNeon ? 'orange' : 'gray' }}
-            >
-                {isNeon ? 'Neon Mode ON' : 'Neon Mode OFF'}
+                onClick={() => setTool('neon')} 
+                style={{ background: tool==='neon' ? 'orange' : 'gray' }}>
+
+                {tool==='neon' ? 'Neon Mode ON' : 'Neon Mode OFF'}
+
             </button>
+
+            <button 
+                onClick={() => setTool('pencil')} 
+                style={{ background: tool==='pencil' ? 'orange' : 'gray' }}>
+
+                {tool==='pencil' ? 'Pencil Mode ON' : 'Pencil Mode OFF'}
+
+            </button>
+
+            <button 
+                onClick={() => setTool('eraser')} 
+                style={{ background: tool==='eraser' ? 'orange' : 'gray' }}>
+
+                {tool==='eraser' ? 'Eraser Mode ON' : 'Eraser Mode OFF'}
+
+            </button>
+
             <canvas
                 ref={canvasRef}
                 onMouseDown={startDrawing}
