@@ -150,19 +150,20 @@ const Canvas = ({socket, roomId}) => {
         ctx.lineJoin= 'round';
         ctx.strokeStyle = color;
 
+        const baseWidth= width*0.002; //width based on screen size so that relative sizes shown on devices
         if(tool==='neon'){
             //create a blur with same color and increase line width : all -> neon effect
-            ctx.shadowBlur= 10;
+            ctx.shadowBlur= width*0.01; //relative width
             ctx.shadowColor= color;
-            ctx.lineWidth= 5;
+            ctx.lineWidth= baseWidth*2.5;
         }
         else if(tool=='pencil'){
             ctx.shadowBlur= 0;
-            ctx.lineWidth= 2;
+            ctx.lineWidth= baseWidth;
         }
         else if(tool=='eraser'){
             ctx.shadowBlur= 0;
-            ctx.lineWidth= 15;
+            ctx.lineWidth= baseWidth*8;
             ctx.strokeStyle= '#ffffff'
         }
         ctx.moveTo(startX, startY);
