@@ -41,16 +41,16 @@ io.on('connection', (socket) => {
     // We use socket.emit (unicast), NOT io.emit (broadcast)
     // socket.emit('get-canvas-state', drawHistory);
 
-    socket.on("draw-line", ({ prevPoint, currentPoint, color, roomId, tool }) => {
+    socket.on("draw-line", ({ prevPoint, currentPoint, color, roomId, tool, strokeId}) => {
         // depr: Add to history
         //drawHistory.push({ prevPoint, currentPoint, color });
         if(roomState.has(roomId)){
-            roomState.get(roomId).push({prevPoint, currentPoint, color, tool});
+            roomState.get(roomId).push({prevPoint, currentPoint, color, tool, strokeId});
         }
 
         // depr: Send to everyone else
         // socket.broadcast.emit("draw-line", { prevPoint, currentPoint, color });
-        socket.to(roomId).emit('draw-line',{prevPoint, currentPoint, color, tool}); //.to sends to particular place/user in this case room
+        socket.to(roomId).emit('draw-line',{prevPoint, currentPoint, color, tool, strokeId}); //.to sends to particular place/user in this case room
 
     });
 
@@ -74,6 +74,25 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log('User Disconnected:', socket.id);
+    });
+
+    //undo
+    socket.on('undo', (roomId)=>{
+        //room present on server
+        if(roomState.has(roomId)){
+            const history= roomState.get(roomId);
+            //if we have something to undo
+            if(history.length>0){
+                const lastLine= history[history.length-1];
+                const toRemoveId= lastLine.strokeId;
+                //filter
+                const newHistory= history.filter(line=>line.strokeId!=toRemoveId);
+                //
+                roomState.set(roomId, newHistory); //mapping updated
+                //sending new history to all in room
+                io.to(roomId).emit('get-canvas-state', newHistory);
+            }
+        }
     });
 });
 

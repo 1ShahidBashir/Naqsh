@@ -7,7 +7,8 @@ const Canvas = ({socket, roomId}) => {
     const historyRef = useRef([]);//for window resizing arch
     // const [isNeon, setIsNeon]= useState(false);
     const [tool, setTool]= useState('pencil');
-
+    //for clustering points into a stroke
+    const currentStrokeId= useRef(null); //useRef so it doesn't trigger renrender
     useEffect(()=>{
         if(socket && roomId){
             //join the room
@@ -45,6 +46,9 @@ const Canvas = ({socket, roomId}) => {
         
         // 2. Save NORMALIZED data (0.5), not pixels (500)
         prevPoint.current = point;
+
+        //stroke cluster for stoke unique ID
+        currentStrokeId.current= Date.now();
     }
 
     const draw = ({ nativeEvent }) => {
@@ -58,13 +62,14 @@ const Canvas = ({socket, roomId}) => {
         const ctx = canvasRef.current.getContext('2d');
 
         // 1. Draw Locally using our new helper
-        drawLine({ prevPoint: prevPoint.current, currentPoint, ctx, color, tool });
+        drawLine({ prevPoint: prevPoint.current, currentPoint, ctx, color, tool, strokeId: currentStrokeId.current});
 
         historyRef.current.push({ 
             prevPoint: prevPoint.current, 
             currentPoint, 
-            color ,
-            tool
+            color,
+            tool,
+            strokeId: currentStrokeId.current
         });
 
         // 2. Send to Server
@@ -74,7 +79,8 @@ const Canvas = ({socket, roomId}) => {
                 currentPoint,
                 color,
                 roomId,
-                tool
+                tool,
+                strokeId: currentStrokeId.current
             });
         }
 
@@ -130,7 +136,7 @@ const Canvas = ({socket, roomId}) => {
     //     ctx.stroke();
     // }
 
-    const drawLine = ({ prevPoint, currentPoint, ctx, color, tool}) => {
+    const drawLine = ({ prevPoint, currentPoint, ctx, color, tool, strokeId}) => {
         // Read current canvas size
         const { width, height } = ctx.canvas;
 
@@ -205,17 +211,19 @@ const Canvas = ({socket, roomId}) => {
         if (!socket) return;
 
         // Listen for the event from the server
-        socket.on("draw-line", ({ prevPoint, currentPoint, color , tool}) => {
+        socket.on("draw-line", ({ prevPoint, currentPoint, color , tool, strokeId}) => {
             const ctx = canvasRef.current.getContext('2d');
             // Call the same helper function!
-            drawLine({ prevPoint, currentPoint, ctx, color , tool});
-            historyRef.current.push({ prevPoint, currentPoint, color , tool});
+            drawLine({ prevPoint, currentPoint, ctx, color , tool, strokeId});
+            historyRef.current.push({ prevPoint, currentPoint, color , tool, strokeId});
         });
 
         //listener for history replay
         socket.on('get-canvas-state', (state)=>{
             console.log("state received replaying");
-            const ctx= canvasRef.current.getContext('2d');
+            const canvas=canvasRef.current;
+            const ctx= canvas.getContext('2d');
+            ctx.clearRect(0,0,canvas.width, canvas.height);
             state.forEach(line => {
                 drawLine({...line,ctx});
             });
@@ -240,6 +248,32 @@ const Canvas = ({socket, roomId}) => {
         };
     }, [socket]); // Re-run if socket changes
     
+    const undo= ()=>{
+        const hLength= historyRef.current.length;
+        if(hLength==0) return; //historyRef arr is empty
+        const lastLine= historyRef.current[hLength-1];
+
+        //to remove
+        const toRemoveId = lastLine.strokeId;
+
+        //now remove by keeping only the lines which are not having to delete id
+        historyRef.current= historyRef.current.filter(line=>line.strokeId!=toRemoveId);
+
+        //redrawing whole again-------
+
+        //clean board
+        const ctx= canvasRef.current.getContext('2d');
+        ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
+        //redraw
+        historyRef.current.forEach(line=>{
+            drawLine({...line, ctx});
+        });
+        //------------------------------
+
+        //socket
+        socket.emit('undo', roomId);
+    }
+
     const [color, setColor]= useState("black");
     return (
         <>
@@ -270,6 +304,8 @@ const Canvas = ({socket, roomId}) => {
                 {tool==='eraser' ? 'Eraser Mode ON' : 'Eraser Mode OFF'}
 
             </button>
+
+            <button onClick={()=>undo()}>Undo</button>
 
             <canvas
                 ref={canvasRef}
